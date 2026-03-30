@@ -12,6 +12,34 @@ jobs:
     # Define permissions for the job
     # Define language to be analyzed
     name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'go' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+    
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
 
   docker:
     name: Docker Build & Run
@@ -19,3 +47,18 @@ jobs:
     needs: analyze
 
     # Define steps to build and run the Docker container
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t go-web-server .
+
+      - name: Run container
+        run: docker run -d -p 8080:8080 go-web-server
+
+      - name: Wait for server to start
+        run: sleep 5
+
+      - name: Test endpoint
+        run: curl "http://localhost:8080/readfile?file=safe-files/hello.txt"
